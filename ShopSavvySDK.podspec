@@ -21,4 +21,7 @@ Pod::Spec.new do |spec|
   
   spec.frameworks    = "Foundation"
   spec.requires_arc  = true
+  spec.pod_target_xcconfig = {
+    'DEFINES_MODULE' => 'YES'
+  }
 end
