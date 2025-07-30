@@ -26,7 +26,7 @@ public class ShopSavvyClient {
     
     /// Create a new ShopSavvy Data API client
     /// - Parameter apiKey: Your ShopSavvy API key
-    public init(apiKey: String) {
+    public convenience init(apiKey: String) {
         self.init(apiKey: apiKey, baseURL: "https://api.shopsavvy.com/v1", timeoutInterval: 30.0)
     }
     
