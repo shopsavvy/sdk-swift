@@ -12,16 +12,11 @@ Pod::Spec.new do |spec|
   spec.author        = { "ShopSavvy Team" => "business@shopsavvy.com" }
 
   spec.ios.deployment_target = "13.0"
-  spec.osx.deployment_target = "10.15"
-
-  spec.swift_versions = ['5.5', '5.6', '5.7', '5.8', '5.9']
+  spec.swift_version = '5.5'
 
   spec.source        = { :git => "https://github.com/shopsavvy/sdk-swift.git", :tag => "#{spec.version}" }
   spec.source_files  = "Sources/ShopSavvySDK/**/*.swift"
   
   spec.frameworks    = "Foundation"
   spec.requires_arc  = true
-  spec.pod_target_xcconfig = {
-    'DEFINES_MODULE' => 'YES'
-  }
 end
