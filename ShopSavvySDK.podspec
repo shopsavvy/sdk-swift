@@ -15,10 +15,12 @@ Pod::Spec.new do |spec|
   spec.swift_version = '5.5'
 
   spec.source        = { :git => "https://github.com/shopsavvy/sdk-swift.git", :tag => "#{spec.version}" }
-  spec.source_files  = "Sources/ShopSavvySDK/**/*.{h,swift}"
-  spec.public_header_files = "Sources/ShopSavvySDK/**/*.h"
-  spec.module_map    = "Sources/ShopSavvySDK/module.modulemap"
+  spec.source_files  = "Sources/ShopSavvySDK/**/*.swift"
   
   spec.frameworks    = "Foundation"
   spec.requires_arc  = true
+  spec.pod_target_xcconfig = {
+    'SWIFT_VERSION' => '5.5',
+    'BUILD_LIBRARY_FOR_DISTRIBUTION' => 'YES'
+  }
 end
