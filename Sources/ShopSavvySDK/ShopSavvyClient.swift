@@ -16,7 +16,7 @@ import Foundation
 ///     print("Error: \(error)")
 /// }
 /// ```
-@available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+@available(iOS 13.0, macOS 10.15, *)
 public class ShopSavvyClient {
     private let apiKey: String
     private let baseURL: String
