@@ -15,7 +15,9 @@ Pod::Spec.new do |spec|
   spec.swift_version = '5.5'
 
   spec.source        = { :git => "https://github.com/shopsavvy/sdk-swift.git", :tag => "#{spec.version}" }
-  spec.source_files  = "Sources/ShopSavvySDK/**/*.swift"
+  spec.source_files  = "Sources/ShopSavvySDK/**/*.{h,swift}"
+  spec.public_header_files = "Sources/ShopSavvySDK/**/*.h"
+  spec.module_map    = "Sources/ShopSavvySDK/module.modulemap"
   
   spec.frameworks    = "Foundation"
   spec.requires_arc  = true

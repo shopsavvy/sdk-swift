@@ -1,0 +1,8 @@
+framework module ShopSavvySDK {
+  header "ShopSavvySDK.h"
+  export *
+  
+  explicit module * {
+    export *
+  }
+}
