@@ -13,7 +13,6 @@ Pod::Spec.new do |spec|
 
   spec.ios.deployment_target = "13.0"
   spec.osx.deployment_target = "10.15"
-  spec.tvos.deployment_target = "13.0"
 
   spec.swift_versions = ['5.5', '5.6', '5.7', '5.8', '5.9']
 
