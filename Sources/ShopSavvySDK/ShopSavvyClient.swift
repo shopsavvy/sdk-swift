@@ -247,6 +247,34 @@ public class ShopSavvyClient {
         return try await performRequest(url: components.url!)
     }
 
+    /// Look up multiple products at once (sync for <=20, async for >20)
+    public func batchLookup(identifiers: [String], include: [String]? = nil) async throws -> [String: Any] {
+        let url = URL(string: "\(baseURL)/products/batch")!
+        var body: [String: Any] = ["identifiers": identifiers]
+        if let include { body["include"] = include }
+        let jsonData = try JSONSerialization.data(withJSONObject: body)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        request.httpBody = jsonData
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
+    /// Poll for async batch job results
+    public func getBatchStatus(batchId: String) async throws -> [String: Any] {
+        let url = URL(string: "\(baseURL)/batch/\(batchId)")!
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
     /// Get TLDR review for a product
     public func getProductReview(identifier: String) async throws -> ReviewResponse {
         var components = URLComponents(string: "\(baseURL)/products/reviews")!
