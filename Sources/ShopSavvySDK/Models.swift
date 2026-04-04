@@ -104,8 +104,23 @@ public struct ProductDetails: Codable {
     public let model: String?
     public let mpn: String?
     public let color: String?
+    public let titleShort: String?
+    public let slug: String?
+    public let description: String?
+    public let categories: [String]?
+    public let attributes: [String: String]?
+    public let rating: [String: AnyCodableValue]?
+    public let score: [String: AnyCodableValue]?
+    public let keywords: [String]?
+    public let identifiers: [String: AnyCodableValue]?
 
-    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil) {
+    enum CodingKeys: String, CodingKey {
+        case title, shopsavvy, brand, category, images, barcode, amazon, model, mpn, color
+        case titleShort = "title_short"
+        case slug, description, categories, attributes, rating, score, keywords, identifiers
+    }
+
+    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil, titleShort: String? = nil, slug: String? = nil, description: String? = nil, categories: [String]? = nil, attributes: [String: String]? = nil, rating: [String: AnyCodableValue]? = nil, score: [String: AnyCodableValue]? = nil, keywords: [String]? = nil, identifiers: [String: AnyCodableValue]? = nil) {
         self.title = title
         self.shopsavvy = shopsavvy
         self.brand = brand
@@ -116,6 +131,15 @@ public struct ProductDetails: Codable {
         self.model = model
         self.mpn = mpn
         self.color = color
+        self.titleShort = titleShort
+        self.slug = slug
+        self.description = description
+        self.categories = categories
+        self.attributes = attributes
+        self.rating = rating
+        self.score = score
+        self.keywords = keywords
+        self.identifiers = identifiers
     }
 
     // Backward-compatible aliases
@@ -418,4 +442,92 @@ public struct UsageInfo: Codable {
 
     /// @deprecated Use currentPeriod.endDate instead
     public func getBillingPeriodEnd() -> String { currentPeriod.endDate }
+}
+
+// MARK: - AnyCodableValue (JSON value wrapper)
+
+public enum AnyCodableValue: Codable {
+    case string(String)
+    case int(Int)
+    case double(Double)
+    case bool(Bool)
+    case null
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let v = try? container.decode(Int.self) { self = .int(v) }
+        else if let v = try? container.decode(Double.self) { self = .double(v) }
+        else if let v = try? container.decode(String.self) { self = .string(v) }
+        else if let v = try? container.decode(Bool.self) { self = .bool(v) }
+        else { self = .null }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let v): try container.encode(v)
+        case .int(let v): try container.encode(v)
+        case .double(let v): try container.encode(v)
+        case .bool(let v): try container.encode(v)
+        case .null: try container.encodeNil()
+        }
+    }
+}
+
+// MARK: - Deals
+
+public struct Deal: Codable {
+    public let path: String
+    public let title: String
+    public let subtitle: String?
+    public let description: String?
+    public let emoji: String?
+    public let grade: [String: AnyCodableValue]
+    public let pricing: [String: AnyCodableValue]
+    public let retailer: [String: String]
+    public let product: String?
+    public let url: String
+    public let image: [String: AnyCodableValue]?
+    public let votes: [String: AnyCodableValue]
+    public let commentCount: Int
+    public let tags: [[String: String]]?
+    public let expiresAt: String?
+    public let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case path, title, subtitle, description, emoji, grade, pricing, retailer, product, url, image, votes, tags
+        case commentCount = "comment_count"
+        case expiresAt = "expires_at"
+        case createdAt = "created_at"
+    }
+}
+
+public struct DealsResponse: Codable {
+    public let success: Bool
+    public let deals: [Deal]
+    public let pagination: [String: AnyCodableValue]
+    public let meta: ApiMeta?
+}
+
+// MARK: - Reviews
+
+public struct TLDRReview: Codable {
+    public let slug: String
+    public let headline: String
+    public let pros: [String]
+    public let cons: [String]
+    public let bottomLine: String
+    public let scores: [String: AnyCodableValue]?
+
+    enum CodingKeys: String, CodingKey {
+        case slug, headline, pros, cons, scores
+        case bottomLine = "bottom_line"
+    }
+}
+
+public struct ReviewResponse: Codable {
+    public let success: Bool
+    public let product: [String: String]
+    public let review: TLDRReview?
+    public let meta: ApiMeta?
 }

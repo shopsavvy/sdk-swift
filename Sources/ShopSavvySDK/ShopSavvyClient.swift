@@ -1,7 +1,7 @@
 import Foundation
 
 /// SDK version
-public let VERSION = "1.0.1"
+public let VERSION = "1.1.0"
 
 /// Official Swift client for ShopSavvy Data API
 ///
@@ -234,6 +234,24 @@ public class ShopSavvyClient {
     public func getUsage() async throws -> ApiResponse<UsageInfo> {
         let url = URL(string: "\(baseURL)/usage")!
         return try await performRequest(url: url)
+    }
+
+    /// Browse current shopping deals
+    public func getDeals(sort: String = "hot", limit: Int = 25, offset: Int = 0, category: String? = nil, retailer: String? = nil, grade: String? = nil) async throws -> DealsResponse {
+        var components = URLComponents(string: "\(baseURL)/deals")!
+        var items = [URLQueryItem(name: "sort", value: sort), URLQueryItem(name: "limit", value: "\(limit)"), URLQueryItem(name: "offset", value: "\(offset)")]
+        if let category { items.append(URLQueryItem(name: "category", value: category)) }
+        if let retailer { items.append(URLQueryItem(name: "retailer", value: retailer)) }
+        if let grade { items.append(URLQueryItem(name: "grade", value: grade)) }
+        components.queryItems = items
+        return try await performRequest(url: components.url!)
+    }
+
+    /// Get TLDR review for a product
+    public func getProductReview(identifier: String) async throws -> ReviewResponse {
+        var components = URLComponents(string: "\(baseURL)/products/reviews")!
+        components.queryItems = [URLQueryItem(name: "id", value: identifier)]
+        return try await performRequest(url: components.url!)
     }
 
     // MARK: - Private Methods
