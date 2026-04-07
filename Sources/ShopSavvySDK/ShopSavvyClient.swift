@@ -275,6 +275,46 @@ public class ShopSavvyClient {
         return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
     }
 
+    public func createWebhook(url: String, events: [String]) async throws -> [String: Any] {
+        let webhookUrl = URL(string: "\(baseURL)/webhooks")!
+        var request = URLRequest(url: webhookUrl)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["url": url, "events": events])
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
+    public func listWebhooks() async throws -> [String: Any] {
+        var request = URLRequest(url: URL(string: "\(baseURL)/webhooks")!)
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
+    public func testWebhook(webhookId: String) async throws -> [String: Any] {
+        let testUrl = URL(string: "\(baseURL)/webhooks/\(webhookId)/test")!
+        var request = URLRequest(url: testUrl)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
+    public func deleteWebhook(webhookId: String) async throws -> [String: Any] {
+        let delUrl = URL(string: "\(baseURL)/webhooks/\(webhookId)")!
+        var request = URLRequest(url: delUrl)
+        request.httpMethod = "DELETE"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
     /// Get TLDR review for a product
     public func getProductReview(identifier: String) async throws -> ReviewResponse {
         var components = URLComponents(string: "\(baseURL)/products/reviews")!
