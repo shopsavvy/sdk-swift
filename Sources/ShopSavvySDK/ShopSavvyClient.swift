@@ -1,7 +1,7 @@
 import Foundation
 
 /// SDK version
-public let VERSION = "1.1.0"
+public let VERSION = "1.1.1"
 
 /// Official Swift client for ShopSavvy Data API
 ///
@@ -301,6 +301,27 @@ public class ShopSavvyClient {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+
+    /// Update a webhook. All parameters are optional, but at least one of
+    /// `url`, `events`, or `isActive` must be non-nil.
+    public func updateWebhook(webhookId: String, url: String? = nil, events: [String]? = nil, isActive: Bool? = nil) async throws -> [String: Any] {
+        guard url != nil || events != nil || isActive != nil else {
+            throw ShopSavvyError.validationError("updateWebhook requires at least one of url, events, or isActive")
+        }
+        let updateUrl = URL(string: "\(baseURL)/webhooks/\(webhookId)")!
+        var request = URLRequest(url: updateUrl)
+        request.httpMethod = "PUT"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("ShopSavvy-Swift-SDK/\(VERSION)", forHTTPHeaderField: "User-Agent")
+        var body: [String: Any] = [:]
+        if let url = url { body["url"] = url }
+        if let events = events { body["events"] = events }
+        if let isActive = isActive { body["is_active"] = isActive }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, _) = try await URLSession.shared.data(for: request)
         return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
     }
