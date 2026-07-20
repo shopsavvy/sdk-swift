@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name          = "ShopSavvySDK"
-  spec.version       = "1.0.0"
+  spec.version       = "1.2.0"
   spec.summary       = "Official Swift SDK for ShopSavvy Data API"
   
   spec.description   = <<-DESC
