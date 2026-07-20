@@ -110,6 +110,10 @@ public struct ProductDetails: Codable {
     public let categories: [String]?
     public let attributes: [String: String]?
     public let rating: [String: AnyCodableValue]?
+    /// Expert quality scores on a 0-1 scale (multiply by 10 or 100 for
+    /// display): "overall", "customer", "professional", plus an "aspects"
+    /// map keyed by free-form aspect names from the product's professional
+    /// reviews.
     public let score: [String: AnyCodableValue]?
     public let keywords: [String]?
     public let identifiers: [String: AnyCodableValue]?
@@ -517,6 +521,10 @@ public struct TLDRReview: Codable {
     public let pros: [String]
     public let cons: [String]
     public let bottomLine: String
+    /// Expert quality scores on a 0-1 scale (multiply by 10 or 100 for
+    /// display): "overall", "customer", "professional", plus an "aspects"
+    /// map keyed by free-form aspect names from the product's professional
+    /// reviews.
     public let scores: [String: AnyCodableValue]?
 
     enum CodingKeys: String, CodingKey {
