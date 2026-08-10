@@ -202,11 +202,15 @@ public struct ProductWithOffers: Codable {
 public struct PriceHistoryEntry: Codable {
     public let timestamp: String
     public let price: Double
+    /// ISO 4217 code `price` is denominated in. `nil` on an archived point with no recorded
+    /// currency — never assume a missing value means USD (ShopSavvy prospector-audit d5-t3-1).
+    public let currency: String?
     public let availability: String?
 
-    public init(timestamp: String, price: Double, availability: String? = nil) {
+    public init(timestamp: String, price: Double, currency: String? = nil, availability: String? = nil) {
         self.timestamp = timestamp
         self.price = price
+        self.currency = currency
         self.availability = availability
     }
 }
