@@ -180,9 +180,13 @@ public class ShopSavvyClient {
     public func getPriceHistory(identifier: String, startDate: String, endDate: String, retailer: String? = nil, format: String? = nil) async throws -> ApiResponse<[OfferWithHistory]> {
         var components = URLComponents(string: "\(baseURL)/products/offers/history")!
         components.queryItems = [
+            // Wire params are "start"/"end" — what GET /products/offers/history
+            // reads, and what the OpenAPI spec and public docs document. The old
+            // "start_date"/"end_date" names came from the MCP tool's argument
+            // convention (a different interface entirely) and 400'd every call.
             URLQueryItem(name: "ids", value: identifier),
-            URLQueryItem(name: "start_date", value: startDate),
-            URLQueryItem(name: "end_date", value: endDate)
+            URLQueryItem(name: "start", value: startDate),
+            URLQueryItem(name: "end", value: endDate)
         ]
 
         if let retailer = retailer {
