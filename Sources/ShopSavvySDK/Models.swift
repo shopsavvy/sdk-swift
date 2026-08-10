@@ -192,14 +192,20 @@ public struct ProductWithOffers: Codable {
 
 // MARK: - Offer Models
 
-/// Historical price point
+/// Historical price point.
+///
+/// The timestamp field is `timestamp`, matching the parent Offer's own `timestamp` and the
+/// real wire shape (`{availability, price, timestamp}`). Every SDK in the fleet declared it
+/// as a non-optional `date` — a key the API has never sent — until 2026-08-10, which with
+/// Swift's synthesized `Decodable` conformance throws `keyNotFound` on a perfectly good 200
+/// response (ShopSavvy prospector-audit s28-t2-2).
 public struct PriceHistoryEntry: Codable {
-    public let date: String
+    public let timestamp: String
     public let price: Double
-    public let availability: String
+    public let availability: String?
 
-    public init(date: String, price: Double, availability: String) {
-        self.date = date
+    public init(timestamp: String, price: Double, availability: String? = nil) {
+        self.timestamp = timestamp
         self.price = price
         self.availability = availability
     }
@@ -248,7 +254,14 @@ public struct Offer: Codable {
     public var lastUpdated: String? { timestamp }
 }
 
-/// Offer with price history
+/// Offer returned by `getPriceHistory()`, i.e. one carrying its `history` array.
+///
+/// The array used to be decoded from a `price_history` CodingKey. The API has never sent a
+/// key by that name — history has always arrived under `history` — and because the property
+/// was non-optional with no default decoding, `JSONDecoder.decode(OfferWithHistory.self, …)`
+/// threw `keyNotFound` on every successful response
+/// (ShopSavvy prospector-audit s28-t2-2). Defaulted to `[]` on decode so a future
+/// server-side field addition can never again make every call throw.
 public struct OfferWithHistory: Codable {
     public let id: String
     public let retailer: String?
@@ -259,15 +272,14 @@ public struct OfferWithHistory: Codable {
     public let url: String?
     public let seller: String?
     public let timestamp: String?
-    public let priceHistory: [PriceHistoryEntry]
+    public let history: [PriceHistoryEntry]
 
     enum CodingKeys: String, CodingKey {
-        case id, retailer, price, currency, availability, condition, seller, timestamp
+        case id, retailer, price, currency, availability, condition, seller, timestamp, history
         case url = "URL"
-        case priceHistory = "price_history"
     }
 
-    public init(id: String, retailer: String? = nil, price: Double? = nil, currency: String? = nil, availability: String? = nil, condition: String? = nil, url: String? = nil, seller: String? = nil, timestamp: String? = nil, priceHistory: [PriceHistoryEntry] = []) {
+    public init(id: String, retailer: String? = nil, price: Double? = nil, currency: String? = nil, availability: String? = nil, condition: String? = nil, url: String? = nil, seller: String? = nil, timestamp: String? = nil, history: [PriceHistoryEntry] = []) {
         self.id = id
         self.retailer = retailer
         self.price = price
@@ -277,7 +289,26 @@ public struct OfferWithHistory: Codable {
         self.url = url
         self.seller = seller
         self.timestamp = timestamp
-        self.priceHistory = priceHistory
+        self.history = history
+    }
+
+    /// Hand-written so a missing `history` key decodes to `[]` instead of throwing
+    /// `keyNotFound`. The synthesized conformance has no decode-time default for a
+    /// non-optional property — a memberwise-init default does not apply to decoding — and
+    /// "one absent key throws away the entire response" is exactly the failure mode this
+    /// type just spent a year in.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        retailer = try container.decodeIfPresent(String.self, forKey: .retailer)
+        price = try container.decodeIfPresent(Double.self, forKey: .price)
+        currency = try container.decodeIfPresent(String.self, forKey: .currency)
+        availability = try container.decodeIfPresent(String.self, forKey: .availability)
+        condition = try container.decodeIfPresent(String.self, forKey: .condition)
+        url = try container.decodeIfPresent(String.self, forKey: .url)
+        seller = try container.decodeIfPresent(String.self, forKey: .seller)
+        timestamp = try container.decodeIfPresent(String.self, forKey: .timestamp)
+        history = try container.decodeIfPresent([PriceHistoryEntry].self, forKey: .history) ?? []
     }
 }
 
