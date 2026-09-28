@@ -25,7 +25,12 @@ let package = Package(
         ),
         .testTarget(
             name: "ShopSavvySDKTests",
-            dependencies: ["ShopSavvySDK"]
+            dependencies: ["ShopSavvySDK"],
+            resources: [
+                // Real-shape GET /products/offers/history response, fed through the
+                // client's actual decode path by PriceHistoryTests.
+                .copy("price-history-response.json")
+            ]
         ),
     ]
 )

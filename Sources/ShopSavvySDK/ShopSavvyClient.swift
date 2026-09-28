@@ -38,7 +38,9 @@ public class ShopSavvyClient {
     ///   - apiKey: Your ShopSavvy API key
     ///   - baseURL: Base URL for the API
     ///   - timeoutInterval: Request timeout interval in seconds
-    public init(apiKey: String, baseURL: String, timeoutInterval: TimeInterval) {
+    ///   - configuration: Base `URLSessionConfiguration` (proxies, `protocolClasses`, caching).
+    ///     The timeout intervals above are applied on top of it.
+    public init(apiKey: String, baseURL: String, timeoutInterval: TimeInterval, configuration: URLSessionConfiguration = .default) {
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             fatalError("API key is required. Get one at https://shopsavvy.com/data")
         }
@@ -50,7 +52,6 @@ public class ShopSavvyClient {
         self.apiKey = apiKey
         self.baseURL = baseURL
 
-        let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = timeoutInterval
         configuration.timeoutIntervalForResource = timeoutInterval
         self.session = URLSession(configuration: configuration)
@@ -176,8 +177,10 @@ public class ShopSavvyClient {
     ///   - endDate: End date (YYYY-MM-DD format)
     ///   - retailer: Optional retailer to filter by
     ///   - format: Response format ('json' or 'csv')
-    /// - Returns: Offers with price history
-    public func getPriceHistory(identifier: String, startDate: String, endDate: String, retailer: String? = nil, format: String? = nil) async throws -> ApiResponse<[OfferWithHistory]> {
+    /// - Returns: One entry per matched product, each carrying its `offers` (one per
+    ///   retailer listing), and each offer carrying its `history` of price points,
+    ///   newest first.
+    public func getPriceHistory(identifier: String, startDate: String, endDate: String, retailer: String? = nil, format: String? = nil) async throws -> ApiResponse<[ProductWithPriceHistory]> {
         var components = URLComponents(string: "\(baseURL)/products/offers/history")!
         components.queryItems = [
             // Wire params are "start"/"end" — what GET /products/offers/history

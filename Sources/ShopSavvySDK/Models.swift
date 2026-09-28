@@ -7,17 +7,21 @@ public struct ApiMeta: Codable {
     public let creditsUsed: Int
     public let creditsRemaining: Int
     public let rateLimitRemaining: Int?
+    /// Server-assigned request id — quote it when contacting support about a specific call.
+    public let requestId: String?
 
     enum CodingKeys: String, CodingKey {
         case creditsUsed = "credits_used"
         case creditsRemaining = "credits_remaining"
         case rateLimitRemaining = "rate_limit_remaining"
+        case requestId = "request_id"
     }
 
-    public init(creditsUsed: Int, creditsRemaining: Int, rateLimitRemaining: Int? = nil) {
+    public init(creditsUsed: Int, creditsRemaining: Int, rateLimitRemaining: Int? = nil, requestId: String? = nil) {
         self.creditsUsed = creditsUsed
         self.creditsRemaining = creditsRemaining
         self.rateLimitRemaining = rateLimitRemaining
+        self.requestId = requestId
     }
 }
 
@@ -258,7 +262,9 @@ public struct Offer: Codable {
     public var lastUpdated: String? { timestamp }
 }
 
-/// Offer returned by `getPriceHistory()`, i.e. one carrying its `history` array.
+/// An offer as it appears inside `getPriceHistory()` — every field of `Offer`, plus the
+/// offer's `history` array. It is nested under `ProductWithPriceHistory.offers`; the
+/// endpoint never returns bare offers at the top level of `data`.
 ///
 /// The array used to be decoded from a `price_history` CodingKey. The API has never sent a
 /// key by that name — history has always arrived under `history` — and because the property
@@ -313,6 +319,97 @@ public struct OfferWithHistory: Codable {
         seller = try container.decodeIfPresent(String.self, forKey: .seller)
         timestamp = try container.decodeIfPresent(String.self, forKey: .timestamp)
         history = try container.decodeIfPresent([PriceHistoryEntry].self, forKey: .history) ?? []
+    }
+}
+
+/// One product as returned by `getPriceHistory()`.
+///
+/// `GET /products/offers/history` returns `data` as a list with ONE ENTRY PER PRODUCT: the
+/// same product fields the products endpoint returns, plus `offers` — each offer at each
+/// retailer, and each offer carrying its own `history` of price points (newest first).
+///
+/// Until 1.3.0 the method was typed `ApiResponse<[OfferWithHistory]>`, i.e. it decoded
+/// `data` as a flat list of offers. A real response's `data[0]` is a product, which has no
+/// `id` key, so every successful call threw `keyNotFound(id)` and surfaced as
+/// `ShopSavvyError.decodingError`.
+public struct ProductWithPriceHistory: Codable {
+    public let title: String
+    public let shopsavvy: String
+    public let brand: String?
+    public let category: String?
+    public let images: [String]?
+    public let barcode: String?
+    public let amazon: String?
+    public let model: String?
+    public let mpn: String?
+    public let color: String?
+    public let titleShort: String?
+    public let slug: String?
+    public let description: String?
+    public let categories: [String]?
+    public let attributes: [String: String]?
+    public let rating: [String: AnyCodableValue]?
+    /// Expert quality scores on a 0-1 scale — same shape as `ProductDetails.score`.
+    public let score: [String: AnyCodableValue]?
+    public let keywords: [String]?
+    public let identifiers: [String: AnyCodableValue]?
+    /// Each offer at each retailer, with its price history for the requested window.
+    public let offers: [OfferWithHistory]
+
+    enum CodingKeys: String, CodingKey {
+        case title, shopsavvy, brand, category, images, barcode, amazon, model, mpn, color
+        case titleShort = "title_short"
+        case slug, description, categories, attributes, rating, score, keywords, identifiers
+        case offers
+    }
+
+    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil, titleShort: String? = nil, slug: String? = nil, description: String? = nil, categories: [String]? = nil, attributes: [String: String]? = nil, rating: [String: AnyCodableValue]? = nil, score: [String: AnyCodableValue]? = nil, keywords: [String]? = nil, identifiers: [String: AnyCodableValue]? = nil, offers: [OfferWithHistory] = []) {
+        self.title = title
+        self.shopsavvy = shopsavvy
+        self.brand = brand
+        self.category = category
+        self.images = images
+        self.barcode = barcode
+        self.amazon = amazon
+        self.model = model
+        self.mpn = mpn
+        self.color = color
+        self.titleShort = titleShort
+        self.slug = slug
+        self.description = description
+        self.categories = categories
+        self.attributes = attributes
+        self.rating = rating
+        self.score = score
+        self.keywords = keywords
+        self.identifiers = identifiers
+        self.offers = offers
+    }
+
+    /// Hand-written so a product with no `offers` key decodes to `[]` rather than throwing
+    /// away the whole response — the same reasoning as `OfferWithHistory.history`.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decode(String.self, forKey: .title)
+        shopsavvy = try container.decode(String.self, forKey: .shopsavvy)
+        brand = try container.decodeIfPresent(String.self, forKey: .brand)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        images = try container.decodeIfPresent([String].self, forKey: .images)
+        barcode = try container.decodeIfPresent(String.self, forKey: .barcode)
+        amazon = try container.decodeIfPresent(String.self, forKey: .amazon)
+        model = try container.decodeIfPresent(String.self, forKey: .model)
+        mpn = try container.decodeIfPresent(String.self, forKey: .mpn)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        titleShort = try container.decodeIfPresent(String.self, forKey: .titleShort)
+        slug = try container.decodeIfPresent(String.self, forKey: .slug)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        categories = try container.decodeIfPresent([String].self, forKey: .categories)
+        attributes = try container.decodeIfPresent([String: String].self, forKey: .attributes)
+        rating = try container.decodeIfPresent([String: AnyCodableValue].self, forKey: .rating)
+        score = try container.decodeIfPresent([String: AnyCodableValue].self, forKey: .score)
+        keywords = try container.decodeIfPresent([String].self, forKey: .keywords)
+        identifiers = try container.decodeIfPresent([String: AnyCodableValue].self, forKey: .identifiers)
+        offers = try container.decodeIfPresent([OfferWithHistory].self, forKey: .offers) ?? []
     }
 }
 
