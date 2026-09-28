@@ -34,6 +34,25 @@ final class SchedulingTests: XCTestCase {
     }
     """.data(using: .utf8)!
 
+    private let scheduledListResponse = """
+    {
+      "success": true,
+      "data": [
+        { "title": "Keurig K-Mini", "category": "Coffee Makers", "brand": "Keurig", "color": "Black",
+          "shopsavvy": "3ONn300xybP3y66ibqc1", "barcode": "611247373064", "amazon": "B07G14HTBZ",
+          "model": "K-Mini", "mpn": null, "images": ["https://images.shopsavvy.com/k-mini.jpg"],
+          "title_short": "K-Mini", "slug": "keurig-k-mini",
+          "identifiers": { "amazon": "B07G14HTBZ", "upc": "611247373064" },
+          "schedule": "hourly", "retailer": "amazon.com" },
+        { "title": "Keurig K-Elite", "shopsavvy": "DrKWneG0MpFlZpwZXNYa", "barcode": "611247369449",
+          "images": [], "schedule": "weekly" },
+        { "title": "Keurig K-Supreme", "shopsavvy": "a1B2c3D4e5F6g7H8i9J0", "barcode": "611247380000",
+          "images": [] }
+      ],
+      "meta": { "request_id": "req-list", "credits_used": 0, "credits_remaining": 0, "rate_limit_remaining": 0 }
+    }
+    """.data(using: .utf8)!
+
     private func makeClient() -> ShopSavvyClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [StubURLProtocol.self]
@@ -148,5 +167,78 @@ final class SchedulingTests: XCTestCase {
         XCTAssertEqual(path, "/v1/products/scheduled")
         XCTAssertEqual(query, ["ids": "611247373064,611247369449"])
         XCTAssertTrue(response.success)
+    }
+
+    func testScheduleResponseCarriesFullProductFields() async throws {
+        StubURLProtocol.responseBody = scheduledListResponse
+        let response = try await makeClient().scheduleProductMonitoring(identifier: "611247373064", frequency: "hourly", retailer: "amazon.com")
+
+        let first = response.data[0]
+        XCTAssertEqual(first.product.title, "Keurig K-Mini")
+        XCTAssertEqual(first.model, "K-Mini")
+        XCTAssertNil(first.mpn)
+        XCTAssertEqual(first.titleShort, "K-Mini")
+        XCTAssertEqual(first.slug, "keurig-k-mini")
+        XCTAssertEqual(first.images, ["https://images.shopsavvy.com/k-mini.jpg"])
+        XCTAssertNotNil(first.identifiers?["upc"])
+        XCTAssertEqual(first.schedule, "hourly")
+        XCTAssertEqual(first.retailer, "amazon.com")
+    }
+
+    func testScheduledListSendsGetAndDecodesProducts() async throws {
+        StubURLProtocol.responseBody = scheduledListResponse
+        let response = try await makeClient().getScheduledProducts()
+
+        let request = try XCTUnwrap(StubURLProtocol.lastRequest)
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.url?.path, "/v1/products/scheduled")
+        XCTAssertNil(request.url?.query)
+
+        XCTAssertTrue(response.success)
+        XCTAssertEqual(response.data.count, 3)
+
+        XCTAssertEqual(response.data[0].title, "Keurig K-Mini")
+        XCTAssertEqual(response.data[0].shopsavvy, "3ONn300xybP3y66ibqc1")
+        XCTAssertEqual(response.data[0].barcode, "611247373064")
+        XCTAssertEqual(response.data[0].brand, "Keurig")
+        XCTAssertEqual(response.data[0].schedule, "hourly")
+        XCTAssertEqual(response.data[0].retailer, "amazon.com")
+
+        XCTAssertEqual(response.data[1].shopsavvy, "DrKWneG0MpFlZpwZXNYa")
+        XCTAssertEqual(response.data[1].schedule, "weekly")
+        XCTAssertNil(response.data[1].retailer)
+        XCTAssertNil(response.data[1].brand)
+
+        // Refresh interval with no Data API label: the API omits `schedule`
+        XCTAssertEqual(response.data[2].barcode, "611247380000")
+        XCTAssertNil(response.data[2].schedule)
+        XCTAssertNil(response.data[2].retailer)
+
+        XCTAssertEqual(response.meta?.requestId, "req-list")
+        XCTAssertEqual(response.creditsUsed(), 0)
+    }
+
+    func testUnscheduleResponseHasNoDataAndDecodesMeta() async throws {
+        StubURLProtocol.responseBody = unscheduleResponse
+        let response = try await makeClient().removeProductsFromScheduleBatch(identifiers: ["611247373064"])
+
+        XCTAssertTrue(response.success)
+        XCTAssertEqual(response.message, "Products successfully removed from schedule")
+        XCTAssertEqual(response.meta?.creditsUsed, 0)
+        XCTAssertEqual(response.meta?.creditsRemaining, 0)
+        XCTAssertEqual(response.meta?.rateLimitRemaining, 0)
+    }
+
+    func testScheduledProductRoundTripsFlatShape() throws {
+        let item = try JSONDecoder().decode(ApiResponse<[ScheduledProduct]>.self, from: scheduledListResponse).data[0]
+        let encoded = try JSONEncoder().encode(item)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        XCTAssertEqual(object["shopsavvy"] as? String, "3ONn300xybP3y66ibqc1")
+        XCTAssertEqual(object["schedule"] as? String, "hourly")
+        XCTAssertEqual(object["retailer"] as? String, "amazon.com")
+        XCTAssertNil(object["product"], "product fields are flattened, as on the wire")
+        let decoded = try JSONDecoder().decode(ScheduledProduct.self, from: encoded)
+        XCTAssertEqual(decoded.barcode, "611247373064")
+        XCTAssertEqual(decoded.schedule, "hourly")
     }
 }

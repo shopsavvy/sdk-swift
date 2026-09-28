@@ -215,7 +215,7 @@ public class ShopSavvyClient {
     ///   - frequency: How often to refresh ('hourly', 'daily', 'weekly')
     ///   - retailer: Optional retailer domain to monitor (e.g. "amazon.com")
     /// - Returns: The products that were scheduled, each with its `schedule`
-    public func scheduleProductMonitoring(identifier: String, frequency: String, retailer: String? = nil) async throws -> ApiResponse<[ScheduledProductResult]> {
+    public func scheduleProductMonitoring(identifier: String, frequency: String, retailer: String? = nil) async throws -> ApiResponse<[ScheduledProduct]> {
         return try await scheduleProductMonitoringBatch(identifiers: [identifier], frequency: frequency, retailer: retailer)
     }
 
@@ -227,7 +227,7 @@ public class ShopSavvyClient {
     ///   - frequency: How often to refresh ('hourly', 'daily', 'weekly')
     ///   - retailer: Optional retailer domain to monitor (e.g. "amazon.com")
     /// - Returns: The products that were scheduled, each with its `schedule`
-    public func scheduleProductMonitoringBatch(identifiers: [String], frequency: String, retailer: String? = nil) async throws -> ApiResponse<[ScheduledProductResult]> {
+    public func scheduleProductMonitoringBatch(identifiers: [String], frequency: String, retailer: String? = nil) async throws -> ApiResponse<[ScheduledProduct]> {
         var components = URLComponents(string: "\(baseURL)/products/scheduled")!
         components.queryItems = [
             URLQueryItem(name: "ids", value: identifiers.joined(separator: ",")),
@@ -241,7 +241,10 @@ public class ShopSavvyClient {
     }
 
     /// Get all scheduled products
-    /// - Returns: List of scheduled products
+    ///
+    /// Sends `GET /products/scheduled`.
+    /// - Returns: Every scheduled product, each with its `schedule` (nil for an interval with
+    ///   no Data API label) and `retailer` (nil when watched across all retailers)
     public func getScheduledProducts() async throws -> ApiResponse<[ScheduledProduct]> {
         let url = URL(string: "\(baseURL)/products/scheduled")!
         return try await performRequest(url: url)

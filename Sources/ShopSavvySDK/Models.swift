@@ -415,94 +415,63 @@ public struct ProductWithPriceHistory: Codable {
 
 // MARK: - Monitoring Models
 
-/// Request model for scheduling product monitoring
-public struct ScheduleRequest: Codable {
-    public let identifier: String
-    public let frequency: String
-    public let retailer: String?
-
-    public init(identifier: String, frequency: String, retailer: String? = nil) {
-        self.identifier = identifier
-        self.frequency = frequency
-        self.retailer = retailer
-    }
-}
-
-/// Response model for scheduling operations
-public struct ScheduleResponse: Codable {
-    public let scheduled: Bool
-    public let productId: String
-
-    enum CodingKeys: String, CodingKey {
-        case scheduled
-        case productId = "product_id"
-    }
-
-    public init(scheduled: Bool, productId: String) {
-        self.scheduled = scheduled
-        self.productId = productId
-    }
-}
-
-/// Response from batch scheduling
-public struct ScheduleBatchResponse: Codable {
-    public let identifier: String
-    public let scheduled: Bool
-    public let productId: String
-
-    enum CodingKeys: String, CodingKey {
-        case identifier, scheduled
-        case productId = "product_id"
-    }
-
-    public init(identifier: String, scheduled: Bool, productId: String) {
-        self.identifier = identifier
-        self.scheduled = scheduled
-        self.productId = productId
-    }
-}
-
-/// One product returned by `scheduleProductMonitoring` / `scheduleProductMonitoringBatch`.
+/// One product on the refresh schedule.
 ///
-/// `PUT /products/scheduled` responds with `data` as a list of the scheduled products: the
-/// usual product fields plus `schedule` (the frequency just set) and, when one was given,
-/// `retailer`.
-public struct ScheduledProductResult: Codable {
-    public let title: String
-    public let shopsavvy: String
-    public let brand: String?
-    public let category: String?
-    public let images: [String]?
-    public let barcode: String?
-    public let amazon: String?
-    public let model: String?
-    public let mpn: String?
-    public let color: String?
-    /// The refresh frequency now in effect: "hourly", "daily" or "weekly"
-    public let schedule: String
-    /// The retailer domain the schedule is limited to, if one was requested
+/// This is the element type of `data` for BOTH `PUT /products/scheduled`
+/// (`scheduleProductMonitoring` / `scheduleProductMonitoringBatch`, which echo back the products
+/// just scheduled) and `GET /products/scheduled` (`getScheduledProducts`). The API sends every
+/// product field (the same object as `GET /products`) flattened alongside `schedule` and
+/// `retailer`; those product fields decode into `product`, and are also readable directly on
+/// this value (`scheduled.title`, `scheduled.barcode`, …) via dynamic member lookup.
+///
+/// Until 1.3.0 the list was modelled as `{product_id, identifier, frequency, created_at,
+/// last_refreshed}` — keys the API has never sent — so decoding every non-empty list threw.
+@dynamicMemberLookup
+public struct ScheduledProduct: Codable {
+    /// The scheduled product's details
+    public let product: ProductDetails
+    /// Refresh frequency: "hourly", "daily" or "weekly". Always present on a schedule
+    /// response. On the list it is nil when the product's refresh interval has no Data API
+    /// label (e.g. a 4h/12h interval set from ShopSavvy Business) — the API omits the key.
+    public let schedule: String?
+    /// Retailer domain the schedule is limited to (e.g. "amazon.com"); nil when the product
+    /// is watched across all retailers — the API omits the key.
     public let retailer: String?
 
-    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil, schedule: String, retailer: String? = nil) {
-        self.title = title
-        self.shopsavvy = shopsavvy
-        self.brand = brand
-        self.category = category
-        self.images = images
-        self.barcode = barcode
-        self.amazon = amazon
-        self.model = model
-        self.mpn = mpn
-        self.color = color
+    enum CodingKeys: String, CodingKey {
+        case schedule, retailer
+    }
+
+    public init(product: ProductDetails, schedule: String? = nil, retailer: String? = nil) {
+        self.product = product
         self.schedule = schedule
         self.retailer = retailer
+    }
+
+    public init(from decoder: Decoder) throws {
+        product = try ProductDetails(from: decoder)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schedule = try container.decodeIfPresent(String.self, forKey: .schedule)
+        retailer = try container.decodeIfPresent(String.self, forKey: .retailer)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        try product.encode(to: encoder)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(schedule, forKey: .schedule)
+        try container.encodeIfPresent(retailer, forKey: .retailer)
+    }
+
+    public subscript<T>(dynamicMember keyPath: KeyPath<ProductDetails, T>) -> T {
+        product[keyPath: keyPath]
     }
 }
 
 /// Response from `removeProductFromSchedule` / `removeProductsFromScheduleBatch`.
 ///
 /// `DELETE /products/scheduled` returns `{ success, message, meta }` with no `data` key, so it
-/// cannot be decoded as `ApiResponse<T>` (whose `data` is required).
+/// cannot be decoded as `ApiResponse<T>` (whose `data` is required). It reports no per-product
+/// results.
 public struct UnscheduleResponse: Codable {
     public let success: Bool
     public let message: String?
@@ -512,61 +481,6 @@ public struct UnscheduleResponse: Codable {
         self.success = success
         self.message = message
         self.meta = meta
-    }
-}
-
-/// Scheduled product model
-public struct ScheduledProduct: Codable {
-    public let productId: String
-    public let identifier: String
-    public let frequency: String
-    public let retailer: String?
-    public let createdAt: String
-    public let lastRefreshed: String?
-
-    enum CodingKeys: String, CodingKey {
-        case productId = "product_id"
-        case identifier, frequency, retailer
-        case createdAt = "created_at"
-        case lastRefreshed = "last_refreshed"
-    }
-
-    public init(productId: String, identifier: String, frequency: String, retailer: String? = nil, createdAt: String, lastRefreshed: String? = nil) {
-        self.productId = productId
-        self.identifier = identifier
-        self.frequency = frequency
-        self.retailer = retailer
-        self.createdAt = createdAt
-        self.lastRefreshed = lastRefreshed
-    }
-}
-
-/// Request model for removing scheduled products
-public struct RemoveRequest: Codable {
-    public let identifier: String
-
-    public init(identifier: String) {
-        self.identifier = identifier
-    }
-}
-
-/// Response model for removal operations
-public struct RemoveResponse: Codable {
-    public let removed: Bool
-
-    public init(removed: Bool) {
-        self.removed = removed
-    }
-}
-
-/// Response from batch removal
-public struct RemoveBatchResponse: Codable {
-    public let identifier: String
-    public let removed: Bool
-
-    public init(identifier: String, removed: Bool) {
-        self.identifier = identifier
-        self.removed = removed
     }
 }
 
