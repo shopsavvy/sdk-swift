@@ -205,16 +205,39 @@ public class ShopSavvyClient {
     // MARK: - Monitoring
 
     /// Schedule product monitoring
+    ///
+    /// Sends `PUT /products/scheduled?ids=…&schedule=…[&retailer=…]`. The API reads these
+    /// values from the QUERY STRING only; before 1.3.0 this method POSTed a JSON body to
+    /// `/products/schedule`, which the server ignored, so every call failed with
+    /// "A 'schedule' query parameter is required".
     /// - Parameters:
     ///   - identifier: Product identifier
     ///   - frequency: How often to refresh ('hourly', 'daily', 'weekly')
-    ///   - retailer: Optional retailer to monitor
-    /// - Returns: Scheduling confirmation
-    public func scheduleProductMonitoring(identifier: String, frequency: String, retailer: String? = nil) async throws -> ApiResponse<ScheduleResponse> {
-        let url = URL(string: "\(baseURL)/products/schedule")!
-        let request = ScheduleRequest(identifier: identifier, frequency: frequency, retailer: retailer)
+    ///   - retailer: Optional retailer domain to monitor (e.g. "amazon.com")
+    /// - Returns: The products that were scheduled, each with its `schedule`
+    public func scheduleProductMonitoring(identifier: String, frequency: String, retailer: String? = nil) async throws -> ApiResponse<[ScheduledProductResult]> {
+        return try await scheduleProductMonitoringBatch(identifiers: [identifier], frequency: frequency, retailer: retailer)
+    }
 
-        return try await performRequest(url: url, method: "POST", body: request)
+    /// Schedule monitoring for several products in one request
+    ///
+    /// Sends `PUT /products/scheduled?ids=<comma-separated>&schedule=…[&retailer=…]`.
+    /// - Parameters:
+    ///   - identifiers: Product identifiers
+    ///   - frequency: How often to refresh ('hourly', 'daily', 'weekly')
+    ///   - retailer: Optional retailer domain to monitor (e.g. "amazon.com")
+    /// - Returns: The products that were scheduled, each with its `schedule`
+    public func scheduleProductMonitoringBatch(identifiers: [String], frequency: String, retailer: String? = nil) async throws -> ApiResponse<[ScheduledProductResult]> {
+        var components = URLComponents(string: "\(baseURL)/products/scheduled")!
+        components.queryItems = [
+            URLQueryItem(name: "ids", value: identifiers.joined(separator: ",")),
+            URLQueryItem(name: "schedule", value: frequency)
+        ]
+        if let retailer = retailer {
+            components.queryItems?.append(URLQueryItem(name: "retailer", value: retailer))
+        }
+
+        return try await performRequest(url: components.url!, method: "PUT")
     }
 
     /// Get all scheduled products
@@ -225,13 +248,25 @@ public class ShopSavvyClient {
     }
 
     /// Remove product from monitoring schedule
+    ///
+    /// Sends `DELETE /products/scheduled?ids=…`. Before 1.3.0 this sent the identifier in a
+    /// JSON body the server never reads, so the call failed with a missing-`ids` error.
     /// - Parameter identifier: Product identifier to remove
-    /// - Returns: Removal confirmation
-    public func removeProductFromSchedule(identifier: String) async throws -> ApiResponse<RemoveResponse> {
-        let url = URL(string: "\(baseURL)/products/schedule")!
-        let request = RemoveRequest(identifier: identifier)
+    /// - Returns: Removal confirmation (`success` and `message`; the endpoint returns no `data`)
+    public func removeProductFromSchedule(identifier: String) async throws -> UnscheduleResponse {
+        return try await removeProductsFromScheduleBatch(identifiers: [identifier])
+    }
 
-        return try await performRequest(url: url, method: "DELETE", body: request)
+    /// Remove several products from the monitoring schedule in one request
+    ///
+    /// Sends `DELETE /products/scheduled?ids=<comma-separated>`.
+    /// - Parameter identifiers: Product identifiers to remove
+    /// - Returns: Removal confirmation (`success` and `message`; the endpoint returns no `data`)
+    public func removeProductsFromScheduleBatch(identifiers: [String]) async throws -> UnscheduleResponse {
+        var components = URLComponents(string: "\(baseURL)/products/scheduled")!
+        components.queryItems = [URLQueryItem(name: "ids", value: identifiers.joined(separator: ","))]
+
+        return try await performRequest(url: components.url!, method: "DELETE")
     }
 
     // MARK: - Usage

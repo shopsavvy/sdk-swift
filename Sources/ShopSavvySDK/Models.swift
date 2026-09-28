@@ -462,6 +462,59 @@ public struct ScheduleBatchResponse: Codable {
     }
 }
 
+/// One product returned by `scheduleProductMonitoring` / `scheduleProductMonitoringBatch`.
+///
+/// `PUT /products/scheduled` responds with `data` as a list of the scheduled products: the
+/// usual product fields plus `schedule` (the frequency just set) and, when one was given,
+/// `retailer`.
+public struct ScheduledProductResult: Codable {
+    public let title: String
+    public let shopsavvy: String
+    public let brand: String?
+    public let category: String?
+    public let images: [String]?
+    public let barcode: String?
+    public let amazon: String?
+    public let model: String?
+    public let mpn: String?
+    public let color: String?
+    /// The refresh frequency now in effect: "hourly", "daily" or "weekly"
+    public let schedule: String
+    /// The retailer domain the schedule is limited to, if one was requested
+    public let retailer: String?
+
+    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil, schedule: String, retailer: String? = nil) {
+        self.title = title
+        self.shopsavvy = shopsavvy
+        self.brand = brand
+        self.category = category
+        self.images = images
+        self.barcode = barcode
+        self.amazon = amazon
+        self.model = model
+        self.mpn = mpn
+        self.color = color
+        self.schedule = schedule
+        self.retailer = retailer
+    }
+}
+
+/// Response from `removeProductFromSchedule` / `removeProductsFromScheduleBatch`.
+///
+/// `DELETE /products/scheduled` returns `{ success, message, meta }` with no `data` key, so it
+/// cannot be decoded as `ApiResponse<T>` (whose `data` is required).
+public struct UnscheduleResponse: Codable {
+    public let success: Bool
+    public let message: String?
+    public let meta: ApiMeta?
+
+    public init(success: Bool, message: String? = nil, meta: ApiMeta? = nil) {
+        self.success = success
+        self.message = message
+        self.meta = meta
+    }
+}
+
 /// Scheduled product model
 public struct ScheduledProduct: Codable {
     public let productId: String
