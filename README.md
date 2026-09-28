@@ -44,14 +44,14 @@ Task {
 **Method 2: Package.swift**
 ```swift
 dependencies: [
-    .package(url: "https://github.com/shopsavvy/sdk-swift.git", from: "1.0.0")
+    .package(url: "https://github.com/shopsavvy/sdk-swift.git", from: "1.3.0")
 ]
 ```
 
 ### CocoaPods
 
 ```ruby
-pod 'ShopSavvySDK', '~> 1.0.0'
+pod 'ShopSavvySDK', '~> 1.3'
 ```
 
 ### Get Your API Key
@@ -268,6 +268,45 @@ func analyzeOffers() async {
         
     } catch {
         print("Error analyzing offers: \(error)")
+    }
+}
+```
+
+### Price History
+
+`getPriceHistory` returns **one entry per product**. Each product carries its `offers` (one per retailer listing), and each offer carries its own `history` of price points for the requested window, newest first. Dates are `YYYY-MM-DD`; the window may span at most 366 days.
+
+```swift
+func printPriceHistory() async {
+    do {
+        let response = try await client.getPriceHistory(
+            identifier: "611247373064",
+            startDate: "2024-01-01",
+            endDate: "2024-01-31",
+            retailer: "amazon.com"   // optional — omit for every retailer
+        )
+
+        for product in response.data {               // [ProductWithPriceHistory]
+            print("📦 \(product.title) (\(product.barcode ?? "no barcode"))")
+
+            for offer in product.offers {           // [OfferWithHistory]
+                print("  🏪 \(offer.retailer ?? "Unknown"): now \(offer.price.map { String($0) } ?? "n/a") \(offer.currency ?? "")")
+
+                for point in offer.history {        // [PriceHistoryEntry], newest first
+                    // `currency` is nil on an archived point with no recorded currency;
+                    // `availability` is nil when it wasn't known at the time.
+                    print("    \(point.timestamp): \(point.price) \(point.currency ?? "") \(point.availability ?? "")")
+                }
+
+                if let low = offer.history.min(by: { $0.price < $1.price }) {
+                    print("    📉 Lowest in window: \(low.price) on \(low.timestamp)")
+                }
+            }
+        }
+
+        print("Credits used: \(response.creditsUsed()), remaining: \(response.creditsRemaining())")
+    } catch {
+        print("Error fetching price history: \(error)")
     }
 }
 ```
