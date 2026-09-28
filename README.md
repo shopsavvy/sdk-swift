@@ -260,7 +260,7 @@ func analyzeOffers() async {
         print("💡 Potential savings: $\(String(format: "%.2f", (mostExpensive.price ?? 0) - (cheapest.price ?? 0)))")
         
         // Filter by availability and condition
-        let inStockOffers = offers.filter { $0.availability == "in_stock" }
+        let inStockOffers = offers.filter { $0.availability == "in" }
         let newConditionOffers = offers.filter { $0.condition == "new" }
         
         print("✅ In-stock offers: \(inStockOffers.count)")
@@ -316,8 +316,8 @@ func printPriceHistory() async {
 ```swift
 // PUT /products/scheduled?ids=…&schedule=daily[&retailer=…]
 let scheduled = try await client.scheduleProductMonitoring(identifier: "611247373064", frequency: "daily")
-for product in scheduled.data {                     // [ScheduledProductResult]
-    print("\(product.title): \(product.schedule) \(product.retailer ?? "all retailers")")
+for product in scheduled.data {                     // [ScheduledProduct]
+    print("\(product.title): \(product.schedule ?? "") \(product.retailer ?? "all retailers")")
 }
 
 // Several products in one request, limited to one retailer
@@ -327,7 +327,15 @@ _ = try await client.scheduleProductMonitoringBatch(
     retailer: "amazon.com"
 )
 
-// DELETE /products/scheduled?ids=…
+// GET /products/scheduled — every scheduled product. Product fields (title, barcode, …) read
+// directly off each entry (or via `.product`); `schedule` is nil for an interval with no Data
+// API label, `retailer` is nil when watched across all retailers.
+let list = try await client.getScheduledProducts()
+for product in list.data {
+    print("\(product.title) [\(product.shopsavvy)]: \(product.schedule ?? "custom interval") \(product.retailer ?? "all retailers")")
+}
+
+// DELETE /products/scheduled?ids=… — returns success/message/meta only, no per-product data
 let removed = try await client.removeProductFromSchedule(identifier: "611247373064")
 print(removed.message ?? "")                        // "Products successfully removed from schedule"
 _ = try await client.removeProductsFromScheduleBatch(identifiers: ["611247369449"])
