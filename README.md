@@ -311,6 +311,28 @@ func printPriceHistory() async {
 }
 ```
 
+### Scheduled Refreshes
+
+```swift
+// PUT /products/scheduled?ids=…&schedule=daily[&retailer=…]
+let scheduled = try await client.scheduleProductMonitoring(identifier: "611247373064", frequency: "daily")
+for product in scheduled.data {                     // [ScheduledProductResult]
+    print("\(product.title): \(product.schedule) \(product.retailer ?? "all retailers")")
+}
+
+// Several products in one request, limited to one retailer
+_ = try await client.scheduleProductMonitoringBatch(
+    identifiers: ["611247373064", "611247369449"],
+    frequency: "hourly",
+    retailer: "amazon.com"
+)
+
+// DELETE /products/scheduled?ids=…
+let removed = try await client.removeProductFromSchedule(identifier: "611247373064")
+print(removed.message ?? "")                        // "Products successfully removed from schedule"
+_ = try await client.removeProductsFromScheduleBatch(identifiers: ["611247369449"])
+```
+
 ## 🚀 Production Deployment
 
 ### iOS App with MVVM Architecture
