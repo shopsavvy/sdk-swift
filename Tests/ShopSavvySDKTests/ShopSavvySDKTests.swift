@@ -23,63 +23,71 @@ final class ShopSavvySDKTests: XCTestCase {
     }
     
     func testModelsDecoding() throws {
+        // Real GET /products response shape: `data` is a list of products, `meta`
+        // carries credit usage and the request id.
         let jsonData = """
         {
-            "data": {
-                "id": "test-product-123",
-                "name": "Test Product",
-                "description": "A test product",
+            "success": true,
+            "data": [{
+                "title": "Test Product",
+                "shopsavvy": "test-product-123",
                 "brand": "TestBrand",
                 "category": "Electronics",
-                "upc": "012345678901",
-                "asin": "B08N5WRWNW",
-                "model_number": "TEST-123",
-                "images": ["https://example.com/image.jpg"],
-                "specifications": {},
-                "created_at": "2024-01-01T00:00:00.000000Z",
-                "updated_at": "2024-01-01T00:00:00.000000Z"
-            },
+                "barcode": "012345678901",
+                "amazon": "B08N5WRWNW",
+                "model": "TEST-123",
+                "mpn": null,
+                "images": ["https://example.com/image.jpg"]
+            }],
             "meta": {
-                "requestId": "req-123",
-                "timestamp": "2024-01-01T00:00:00.000000Z",
-                "cached": false,
-                "credits_used": 1
+                "request_id": "req-123",
+                "credits_used": 1,
+                "credits_remaining": 999
             }
         }
         """.data(using: .utf8)!
-        
+
         let decoder = JSONDecoder()
-        let response = try decoder.decode(ApiResponse<ProductDetails>.self, from: jsonData)
-        
-        XCTAssertEqual(response.data.id, "test-product-123")
-        XCTAssertEqual(response.data.name, "Test Product")
-        XCTAssertEqual(response.meta.requestId, "req-123")
-        XCTAssertEqual(response.meta.creditsUsed, 1)
+        let response = try decoder.decode(ApiResponse<[ProductDetails]>.self, from: jsonData)
+
+        XCTAssertEqual(response.data[0].shopsavvy, "test-product-123")
+        XCTAssertEqual(response.data[0].name, "Test Product")
+        XCTAssertEqual(response.data[0].barcode, "012345678901")
+        XCTAssertNil(response.data[0].mpn)
+        XCTAssertEqual(response.meta?.requestId, "req-123")
+        XCTAssertEqual(response.meta?.creditsUsed, 1)
+        XCTAssertEqual(response.creditsRemaining(), 999)
     }
-    
+
     func testOfferDecoding() throws {
+        // Real offer shape: the link is under `URL` (capitalised) and `seller` is
+        // frequently JSON null.
         let jsonData = """
         {
+            "id": "offer-1",
             "retailer": "TestRetailer",
             "price": 99.99,
             "currency": "USD",
-            "availability": "in_stock",
+            "availability": "in",
             "condition": "new",
-            "shipping_cost": 5.99,
-            "url": "https://example.com/product",
-            "last_updated": "2024-01-01T00:00:00.000000Z"
+            "seller": null,
+            "URL": "https://example.com/product",
+            "timestamp": "2024-01-01T00:00:00.000Z"
         }
         """.data(using: .utf8)!
-        
+
         let decoder = JSONDecoder()
         let offer = try decoder.decode(Offer.self, from: jsonData)
-        
+
+        XCTAssertEqual(offer.id, "offer-1")
         XCTAssertEqual(offer.retailer, "TestRetailer")
         XCTAssertEqual(offer.price, 99.99)
         XCTAssertEqual(offer.currency, "USD")
-        XCTAssertEqual(offer.shippingCost, 5.99)
+        XCTAssertEqual(offer.url, "https://example.com/product")
+        XCTAssertNil(offer.seller)
+        XCTAssertEqual(offer.lastUpdated, "2024-01-01T00:00:00.000Z")
     }
-    
+
     func testErrorTypes() {
         let networkError = ShopSavvyError.networkError("Connection failed")
         XCTAssertTrue(networkError.localizedDescription.contains("Network error"))
