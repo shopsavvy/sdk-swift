@@ -4,7 +4,7 @@ Pod::Spec.new do |spec|
   spec.summary       = "Official Swift SDK for ShopSavvy Data API"
   
   spec.description   = <<-DESC
-                       Official Swift SDK for ShopSavvy Data API - Access product data, pricing, and price history across thousands of retailers and millions of products.
+                       Official Swift SDK for ShopSavvy Data API - Access product data, pricing, and price history across tens of thousands of retailers and 30M+ products.
                        DESC
 
   spec.homepage      = "https://shopsavvy.com/data"
