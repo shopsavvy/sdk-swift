@@ -1,7 +1,7 @@
 import Foundation
 
 /// SDK version
-public let VERSION = "1.3.0"
+public let VERSION = "1.5.0"
 
 /// Official Swift client for ShopSavvy Data API
 ///

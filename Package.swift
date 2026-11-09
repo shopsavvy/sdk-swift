@@ -29,7 +29,8 @@ let package = Package(
             resources: [
                 // Real-shape GET /products/offers/history response, fed through the
                 // client's actual decode path by PriceHistoryTests.
-                .copy("price-history-response.json")
+                .copy("price-history-response.json"),
+                .copy("offers-in-store-response.json")
             ]
         ),
     ]

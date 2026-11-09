@@ -178,8 +178,16 @@ public struct ProductWithOffers: Codable {
     public let mpn: String?
     public let color: String?
     public let offers: [Offer]
+    /// User-collected in-store shelf prices read from shoppers' scanned receipts. Empty when
+    /// none are on file, or when an older server omits the key.
+    public let inStorePrices: [InStorePrice]
 
-    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil, offers: [Offer] = []) {
+    enum CodingKeys: String, CodingKey {
+        case title, shopsavvy, brand, category, images, barcode, amazon, model, mpn, color, offers
+        case inStorePrices = "in_store_prices"
+    }
+
+    public init(title: String, shopsavvy: String, brand: String? = nil, category: String? = nil, images: [String]? = nil, barcode: String? = nil, amazon: String? = nil, model: String? = nil, mpn: String? = nil, color: String? = nil, offers: [Offer] = [], inStorePrices: [InStorePrice] = []) {
         self.title = title
         self.shopsavvy = shopsavvy
         self.brand = brand
@@ -191,7 +199,51 @@ public struct ProductWithOffers: Codable {
         self.mpn = mpn
         self.color = color
         self.offers = offers
+        self.inStorePrices = inStorePrices
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        title = try container.decode(String.self, forKey: .title)
+        shopsavvy = try container.decode(String.self, forKey: .shopsavvy)
+        brand = try container.decodeIfPresent(String.self, forKey: .brand)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        images = try container.decodeIfPresent([String].self, forKey: .images)
+        barcode = try container.decodeIfPresent(String.self, forKey: .barcode)
+        amazon = try container.decodeIfPresent(String.self, forKey: .amazon)
+        model = try container.decodeIfPresent(String.self, forKey: .model)
+        mpn = try container.decodeIfPresent(String.self, forKey: .mpn)
+        color = try container.decodeIfPresent(String.self, forKey: .color)
+        offers = try container.decode([Offer].self, forKey: .offers)
+        inStorePrices = try container.decodeIfPresent([InStorePrice].self, forKey: .inStorePrices) ?? []
+    }
+}
+
+/// A shelf price a physical store charged on a given day, read from a shopper's scanned
+/// receipt. `source` is always `"user-collected"`. It says what the store sold the product for
+/// that day, not that it is in stock now; nothing about the shopper is included.
+public struct InStorePrice: Codable {
+    public let source: String
+    public let retailer: String?
+    public let store: InStoreLocation
+    /// Unit shelf price paid (the median when several receipts from the store agree).
+    public let price: Double
+    public let currency: String
+    /// YYYY-MM-DD date of the most recent receipt behind the price.
+    public let observedOn: String?
+    public let timestamp: String?
+
+    enum CodingKeys: String, CodingKey {
+        case source, retailer, store, price, currency, timestamp
+        case observedOn = "observed_on"
+    }
+}
+
+/// The store an `InStorePrice` was charged at.
+public struct InStoreLocation: Codable {
+    public let address: String?
+    public let latitude: Double?
+    public let longitude: Double?
 }
 
 // MARK: - Offer Models
