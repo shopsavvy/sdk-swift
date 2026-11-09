@@ -604,6 +604,9 @@ class SDKTester {
 ## 📚 Additional Resources
 
 - **[ShopSavvy Data API Documentation](https://shopsavvy.com/data/documentation)** - Complete API reference
+- **[Postman Collection](https://shopsavvy.com/templates/data-api-postman-collection)** - Every endpoint, ready to import
+- **[API Evaluation Checklist](https://shopsavvy.com/templates/product-data-api-evaluation-checklist)** - Free template for comparing product data APIs
+- **[Free UPC Lookup](https://shopsavvy.com/tools/upc-lookup)** - Look up any barcode in the browser, no code
 - **[API Dashboard](https://shopsavvy.com/data/dashboard)** - Manage your API keys and usage
 - **[GitHub Repository](https://github.com/shopsavvy/sdk-swift)** - Source code and issues
 - **[Swift Package Index](https://swiftpackageindex.com/shopsavvy/sdk-swift)** - Package documentation
